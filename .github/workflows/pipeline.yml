@@ -16,7 +16,6 @@ jobs:
       - run: pytest -q
 
   semgrep:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +25,6 @@ jobs:
           semgrep scan --config=auto --error --exclude=vulnerable_version .
 
   dependency-check:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +45,6 @@ jobs:
           path: reports
 
   detect-secrets:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +63,7 @@ jobs:
           EOF
 
   deploy:
-    needs: [semgrep, dependency-check, detect-secrets]
+    needs: [test, semgrep, dependency-check, detect-secrets]
     if: github.ref == 'refs/heads/fixed'
     runs-on: ubuntu-latest
     steps:

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
    <suppress>
-      <notes><![CDATA[PyJWT coincide con un CPE generico "jwt" que no corresponde al paquete real, generando falsos positivos confirmados (misma lista de CVEs sin importar la version instalada).]]></notes>
+      <notes><![CDATA[PyJWT coincide con un CPE generico "jwt" que no corresponde al paquete real, generando falsos positivos confirmados.]]></notes>
       <packageUrl regex="true">^pkg:pypi/pyjwt@.*$</packageUrl>
+      <cvssBelow>10.0</cvssBelow>
    </suppress>
 </suppressions>

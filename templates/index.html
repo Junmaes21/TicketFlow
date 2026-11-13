@@ -27,17 +27,6 @@
       <p id="auth-error" class="error"></p>
     </div>
 
-    <!-- LABORATORIO DE SEGURIDAD -->
-    <div class="card lab-card">
-      <h3>🔬 Laboratorio de seguridad</h3>
-      <p class="muted">Demostración en vivo de los ataques que este pipeline detecta. Inicia sesión primero.</p>
-      <div class="lab-buttons">
-        <button class="btn-lab" data-lab="path-traversal">Robar archivo (path traversal)</button>
-        <button class="btn-lab" data-lab="forge-session">Falsificar sesión (JWT)</button>
-        <button class="btn-lab" data-lab="xss">Inyectar script (XSS)</button>
-      </div>
-      <pre id="lab-output" class="lab-output"></pre>
-    </div>
   </section>
 
   <!-- APP SCREEN -->
@@ -50,6 +39,18 @@
       </aside>
 
       <main class="main">
+        <!-- LABORATORIO DE SEGURIDAD -->
+        <div class="card lab-card">
+          <h3>🔬 Laboratorio de seguridad</h3>
+          <p class="muted">Prueba las protecciones con tu sesión iniciada. Las demostraciones no acceden a información ajena ni ejecutan código.</p>
+          <div class="lab-buttons">
+            <button class="btn-lab" data-lab="path-traversal">Probar path traversal</button>
+            <button class="btn-lab" data-lab="forge-session">Probar falsificación de JWT</button>
+            <button class="btn-lab" data-lab="xss">Probar XSS almacenado</button>
+          </div>
+          <pre id="lab-output" class="lab-output" aria-live="polite"></pre>
+        </div>
+
         <div class="new-ticket card">
           <h3>Nuevo ticket</h3>
           <form id="ticket-form">

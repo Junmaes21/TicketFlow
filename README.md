@@ -1,28 +1,24 @@
 # TicketFlow
 
-Gestor de tickets de soporte (tipo mini Jira) hecho con Flask + SQLite.
-Permite crear cuentas, abrir tickets, comentarlos y adjuntar archivos.
+Gestor de tickets de soporte creado con Flask y SQLite. Permite crear cuentas, abrir tickets, comentarlos, adjuntar archivos y probar las protecciones desde un laboratorio interactivo.
 
-Este proyecto existe en dos versiones:
+## Enlaces
 
-- **Rama `vulnerable`**: tiene 4 fallos de seguridad puestos a propósito.
-- **Rama `fixed`**: los mismos 4 fallos, corregidos.
+- **Aplicación pública:** [ticketflow-j1xn.onrender.com](https://ticketflow-j1xn.onrender.com)
+- **Repositorio:** [Junmaes21/TicketFlow](https://github.com/Junmaes21/TicketFlow)
 
-Un pipeline de GitHub Actions revisa cada cambio con 4 escáneres gratuitos
-(Semgrep, OWASP Dependency-Check, detect-secrets y OWASP ZAP) y solo si todos
-pasan, despliega la aplicación en Render.
+Registra una cuenta para entrar. En una base de datos vacía, la primera cuenta es administradora; las siguientes son miembros. No uses información real: es una aplicación demostrativa.
 
-## Los 4 fallos (rama vulnerable)
+## Ramas y escaneo
 
-1. **Path traversal** al descargar un adjunto (`Semgrep`).
-2. **Dependencias desactualizadas** con CVEs conocidos (`Dependency-Check`).
-3. **Secreto hardcodeado** usado para firmar los JWT (`detect-secrets`).
-4. **XSS almacenado** en los comentarios de un ticket (`OWASP ZAP`).
+- **`fixed`** contiene la aplicación corregida y es la única rama que puede desplegarse.
+- **`vulnerable`** conserva cuatro fallos intencionales para mostrar el comportamiento de los análisis. No se despliega.
 
-El código de esta versión (fixed) ya tiene los 4 corregidos. Los archivos que
-cambian en la versión vulnerable están en `vulnerable_version/`.
+GitHub Actions ejecuta pruebas, Ruff, Semgrep, OWASP Dependency-Check y detect-secrets. En `fixed`, además ejecuta OWASP ZAP contra la aplicación candidata local; Render recibe la orden de despliegue solo si todos esos pasos pasan.
 
-## Cómo correrlo localmente
+Los escáneres tienen límites conocidos: Semgrep puede no detectar el path traversal en la ruta ensayada, y Dependency-Check no siempre identifica versiones vulnerables de paquetes Python cuando no encuentra un CPE. ZAP corre contra la candidata antes del despliegue, pero su análisis anónimo no recorre funciones que requieren iniciar sesión. El pipeline no equivale a una garantía de que la aplicación esté libre de vulnerabilidades.
+
+## Ejecutar localmente
 
 ```bash
 python -m venv venv
@@ -38,6 +34,7 @@ registra queda como administrador, el resto como miembro.
 
 ```bash
 pytest -q
+ruff check app.py auth.py config.py db.py wsgi.py tests
 ```
 
 ## Variables de entorno
@@ -51,5 +48,4 @@ pytest -q
 
 ## Despliegue
 
-Pensado para Render, usando `render.yaml` y un Deploy Hook disparado solo
-desde el pipeline (ver el artículo para el detalle completo).
+Render usa `render.yaml` y recibe un Deploy Hook después de que el pipeline de `fixed` pasa. El plan gratuito usa almacenamiento efímero, por lo que los tickets y adjuntos pueden perderse cuando el servicio se reinicia o despliega de nuevo.

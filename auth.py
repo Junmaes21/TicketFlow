@@ -1,8 +1,8 @@
-from functools import wraps
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 
 import jwt
-from flask import current_app, request, jsonify, g
+from flask import current_app, g, jsonify, request
 
 from db import query
 

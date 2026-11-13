@@ -291,7 +291,7 @@ def register_routes(app):
         import jwt as pyjwt
 
         guessed_secret = "ticketflow-dev-secret-2024"  # pragma: allowlist secret  # nosemgrep
-        forged = pyjwt.encode(
+        forged = pyjwt.encode(  # nosemgrep
             {"sub": "1", "username": "demo", "role": "admin"},
             guessed_secret,
             algorithm="HS256",

@@ -22,7 +22,7 @@ jobs:
       - name: Analisis estatico con Semgrep
         run: |
           pip install semgrep
-          semgrep scan --config=p/security-audit --error --exclude=vulnerable_version --exclude=.github .
+          semgrep scan --config=auto --error --exclude=vulnerable_version --exclude=.github .
 
   dependency-check:
     runs-on: ubuntu-latest

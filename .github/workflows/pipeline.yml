@@ -1,0 +1,88 @@
+name: Pipeline de seguridad
+
+on:
+  push:
+    branches: [fixed, vulnerable]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  semgrep:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analisis estatico con Semgrep
+        run: |
+          pip install semgrep
+          semgrep scan --config=auto --error --exclude=vulnerable_version .
+
+  dependency-check:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analisis de dependencias con OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "TicketFlow"
+          path: "."
+          format: "HTML"
+          args: >
+            --failOnCVSS 4
+            --exclude "**/vulnerable_version/**"
+      - name: Subir reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports
+
+  detect-secrets:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Escaneo de secretos con detect-secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --exclude-files 'vulnerable_version/.*' > secrets-report.json
+          python - <<'EOF'
+          import json, sys
+          data = json.load(open("secrets-report.json"))
+          if data.get("results"):
+              print("Se encontraron posibles secretos:")
+              print(json.dumps(data["results"], indent=2))
+              sys.exit(1)
+          print("No se encontraron secretos.")
+          EOF
+
+  deploy:
+    needs: [semgrep, dependency-check, detect-secrets]
+    if: github.ref == 'refs/heads/fixed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar despliegue en Render
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+  zap:
+    needs: deploy
+    if: github.ref == 'refs/heads/fixed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar a que el despliegue quede activo
+        run: sleep 60
+      - name: Escaneo dinamico con OWASP ZAP
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "https://ticketflow-j1xn.onrender.com"
+          fail_action: true
+          allow_issue_writing: false

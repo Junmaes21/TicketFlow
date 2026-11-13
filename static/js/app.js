@@ -151,23 +151,13 @@ function renderTicketDetail(data) {
   container.appendChild(commentsTitle);
 
   const list = document.createElement("div");
-  data.comments.forEach((c) => {
+    data.comments.forEach((c) => {
     const div = document.createElement("div");
     div.className = "comment";
-
-    const author = document.createElement("div");
-    author.className = "author";
-    author.textContent = c.author;
-
-    const body = document.createElement("div");
-    // clave de la correccion del XSS: textContent escapa cualquier cosa
-    // que el usuario haya escrito, nunca se interpreta como HTML/JS
-    body.textContent = c.body;
-
-    div.appendChild(author);
-    div.appendChild(body);
+    div.innerHTML = `<div class="author">${c.author}</div><div>${c.body}</div>`;
     list.appendChild(div);
   });
+  
   container.appendChild(list);
 
   const form = document.createElement("form");

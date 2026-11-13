@@ -1,19 +1,18 @@
 import os
-import secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    """Configuración de la aplicación (rama fixed).
+    """Configuración de la aplicación (rama vulnerable).
 
-    La clave para firmar los JWT viene de una variable de entorno.
-    Si no existe (por ejemplo en un entorno local nuevo) se genera una
-    aleatoria al arrancar, en vez de caer en un valor fijo que cualquiera
-    que lea el repositorio podría conocer.
+    FALLO 3: la clave para firmar los JWT está escrita directamente en el
+    código. Cualquiera que lea el repositorio la conoce, y como Flask usa
+    esta misma clave para firmar las sesiones, quien la tenga podría
+    falsificar la sesión de cualquier usuario sin conocer su contraseña.
     """
 
-    SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or secrets.token_hex(32)
+    SECRET_KEY = "ticketflow-dev-secret-2024"
 
     DATABASE = os.environ.get(
         "DATABASE_PATH", os.path.join(BASE_DIR, "ticketflow.db")
@@ -23,7 +22,7 @@ class Config:
         "UPLOAD_FOLDER", os.path.join(BASE_DIR, "uploads")
     )
 
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB por adjunto
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
     JWT_ALGORITHM = "HS256"
     JWT_EXP_MINUTES = 60

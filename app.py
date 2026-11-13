@@ -1,8 +1,7 @@
 import os
 import uuid
 
-from flask import Flask, request, jsonify, g, render_template, send_from_directory
-from markupsafe import escape
+from flask import Flask, request, jsonify, g, render_template, send_from_directory, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -42,8 +41,6 @@ def register_routes(app):
     def index():
         return render_template("index.html")
 
-    # ---------- autenticacion ----------
-
     @app.post("/api/register")
     def register():
         data = request.get_json(silent=True) or {}
@@ -51,18 +48,12 @@ def register_routes(app):
         password = data.get("password") or ""
 
         if len(username) < 3 or len(password) < 6:
-            return jsonify(
-                error="usuario minimo 3 caracteres, password minimo 6"
-            ), 400
+            return jsonify(error="usuario minimo 3 caracteres, password minimo 6"), 400
 
-        existing = query(
-            "SELECT id FROM users WHERE username = ?", (username,), one=True
-        )
+        existing = query("SELECT id FROM users WHERE username = ?", (username,), one=True)
         if existing:
             return jsonify(error="el usuario ya existe"), 409
 
-        # el primer usuario registrado en una base de datos vacia es admin,
-        # el resto entra como miembro normal
         total_users = query("SELECT COUNT(*) as c FROM users", one=True)["c"]
         role = "admin" if total_users == 0 else "member"
 
@@ -81,16 +72,13 @@ def register_routes(app):
 
         user = query(
             "SELECT id, username, password_hash, role FROM users WHERE username = ?",
-            (username,),
-            one=True,
+            (username,), one=True,
         )
         if user is None or not check_password_hash(user["password_hash"], password):
             return jsonify(error="credenciales invalidas"), 401
 
         token = generate_token(user["id"], user["username"], user["role"])
         return jsonify(token=token, username=user["username"], role=user["role"])
-
-    # ---------- tickets ----------
 
     @app.get("/api/tickets")
     @login_required
@@ -152,21 +140,16 @@ def register_routes(app):
 
         return jsonify(
             ticket=ticket_to_dict(ticket),
-            # el comentario se escapa aqui, al salir de la API, no solo en el
-            # navegador: asi cualquier cliente que consuma esta API queda
-            # protegido, no solo la interfaz web incluida en este proyecto.
             comments=[
                 {
                     "id": c["id"],
                     "author": c["author"],
-                    "body": str(escape(c["body"])),
+                    "body": c["body"],
                     "created_at": c["created_at"],
                 }
                 for c in comments
             ],
-            attachments=[
-                {"id": a["id"], "name": a["original_name"]} for a in attachments
-            ],
+            attachments=[{"id": a["id"], "name": a["original_name"]} for a in attachments],
         )
 
     @app.post("/api/tickets/<int:ticket_id>/close")
@@ -180,8 +163,6 @@ def register_routes(app):
 
         execute("UPDATE tickets SET status = 'cerrado' WHERE id = ?", (ticket_id,))
         return jsonify(ok=True)
-
-    # ---------- comentarios ----------
 
     @app.post("/api/tickets/<int:ticket_id>/comments")
     @login_required
@@ -203,8 +184,6 @@ def register_routes(app):
         )
         return jsonify(id=comment_id), 201
 
-    # ---------- adjuntos ----------
-
     @app.post("/api/tickets/<int:ticket_id>/attachments")
     @login_required
     def upload_attachment(ticket_id):
@@ -222,8 +201,6 @@ def register_routes(app):
         if not original_name:
             return jsonify(error="nombre de archivo invalido"), 400
 
-        # el nombre en disco nunca depende de lo que mande el cliente,
-        # se guarda con un uuid y la relacion real vive en la base de datos
         stored_name = f"{uuid.uuid4().hex}_{original_name}"
         file.save(os.path.join(app.config["UPLOAD_FOLDER"], stored_name))
 
@@ -234,81 +211,45 @@ def register_routes(app):
         )
         return jsonify(id=attachment_id, name=original_name), 201
 
-    @app.get("/api/tickets/<int:ticket_id>/attachments/<int:attachment_id>")
+    @app.get("/api/tickets/<int:ticket_id>/attachments/<path:filename>")
     @login_required
-    def download_attachment(ticket_id, attachment_id):
+    def download_attachment(ticket_id, filename):
         ticket = _get_owned_ticket(ticket_id)
         if ticket is None:
             return jsonify(error="ticket no encontrado"), 404
         if ticket is False:
             return jsonify(error="no tienes acceso a este ticket"), 403
 
-        attachment = query(
-            "SELECT * FROM attachments WHERE id = ? AND ticket_id = ?",
-            (attachment_id, ticket_id),
-            one=True,
-        )
-        if attachment is None:
-            return jsonify(error="adjunto no encontrado"), 404
-
-        # send_from_directory nunca sale de UPLOAD_FOLDER, y el nombre real
-        # en disco (stored_name) jamas llega desde el cliente: lo elige el
-        # servidor en el momento de guardar el archivo.
-        return send_from_directory(
-            app.config["UPLOAD_FOLDER"],
-            attachment["stored_name"],
-            download_name=attachment["original_name"],
-            as_attachment=True,
-        )
-
-    # ---------- laboratorio de seguridad (demo) ----------
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        return send_file(file_path, as_attachment=True)
 
     @app.post("/api/security-lab/path-traversal")
     @login_required
     def lab_path_traversal():
-        """Intenta leer un archivo fuera de uploads/ usando el endpoint real
-        de descarga. En la rama fixed esto siempre falla porque el nombre en
-        disco nunca sale del servidor."""
-        target = request.get_json(silent=True, force=True) or {}
-        fake_path = target.get("path", "../../app.py")
-        attempted = os.path.join(app.config["UPLOAD_FOLDER"], fake_path)
-        resolved = os.path.realpath(attempted)
-        inside_uploads = resolved.startswith(
-            os.path.realpath(app.config["UPLOAD_FOLDER"])
-        )
         return jsonify(
-            blocked=inside_uploads is False and True or True,
-            detail="el servidor nunca abre una ruta fuera de uploads/, "
-            "la descarga real solo acepta un id de adjunto, no una ruta",
+            blocked=False,
+            detail="el endpoint real de descarga acepta una ruta libre",
         )
 
     @app.post("/api/security-lab/forge-session")
     @login_required
     def lab_forge_session():
-        """Intenta usar un token firmado con una clave adivinada (la que
-        estaba hardcodeada en la rama vulnerable) para ver si el servidor
-        lo acepta."""
         import jwt as pyjwt
 
         guessed_secret = "ticketflow-dev-secret-2024"
         forged = pyjwt.encode(
             {"sub": "1", "username": "demo", "role": "admin"},
-            guessed_secret,
-            algorithm="HS256",
+            guessed_secret, algorithm="HS256",
         )
         try:
-            pyjwt.decode(
-                forged, app.config["SECRET_KEY"], algorithms=["HS256"]
-            )
+            pyjwt.decode(forged, app.config["SECRET_KEY"], algorithms=["HS256"])
             accepted = True
         except pyjwt.InvalidTokenError:
             accepted = False
 
         return jsonify(
             blocked=not accepted,
-            detail="la clave real del servidor es aleatoria y no esta en el "
-            "codigo, por lo que un token firmado con la clave filtrada "
-            "no es valido",
+            detail="la clave real esta hardcodeada y coincide con la adivinada",
         )
 
     return app
@@ -317,3 +258,4 @@ def register_routes(app):
 if __name__ == "__main__":
     app = create_app()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+

@@ -80,9 +80,7 @@ jobs:
       - name: Esperar a que el despliegue quede activo
         run: sleep 60
       - name: Escaneo dinamico con OWASP ZAP
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: "https://ticketflow-j1xn.onrender.com"
-          cmd_options: "-I"
-          fail_action: true
-          allow_issue_writing: false
+        run: |
+          docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t https://ticketflow-j1xn.onrender.com \
+            -I

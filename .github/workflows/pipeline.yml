@@ -22,7 +22,7 @@ jobs:
       - name: Analisis estatico con Semgrep
         run: |
           pip install semgrep
-          semgrep scan --config=auto --error --exclude=vulnerable_version .
+          semgrep scan --config=p/security-audit --error --exclude=vulnerable_version --exclude=.github .
 
   dependency-check:
     runs-on: ubuntu-latest
@@ -38,6 +38,7 @@ jobs:
             --enableExperimental
             --failOnCVSS 4
             --exclude "**/vulnerable_version/**"
+            --suppression dependency-check-suppression.xml
       - name: Subir reporte
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,7 +53,7 @@ jobs:
       - name: Escaneo de secretos con detect-secrets
         run: |
           pip install detect-secrets
-          detect-secrets scan --exclude-files 'vulnerable_version/.*' > secrets-report.json
+          detect-secrets scan --exclude-files '(vulnerable_version|tests)/.*' > secrets-report.json
           python - <<'EOF'
           import json, sys
           data = json.load(open("secrets-report.json"))

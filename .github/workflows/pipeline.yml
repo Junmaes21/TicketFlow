@@ -83,5 +83,6 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: "https://ticketflow-j1xn.onrender.com"
+          cmd_options: "-I"
           fail_action: true
           allow_issue_writing: false

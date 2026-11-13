@@ -82,9 +82,10 @@ jobs:
           python-version: "3.11.18"
       - name: Instalar la aplicacion
         run: pip install -r requirements.txt
+      - name: Generar una clave temporal para el escaneo
+        run: echo "JWT_SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Iniciar la aplicacion candidata
         env:
-          JWT_SECRET_KEY: ticketflow-ci-zap-temporary-key
           DATABASE_PATH: /tmp/ticketflow-zap.sqlite
           UPLOAD_FOLDER: /tmp/ticketflow-zap-uploads
         run: |

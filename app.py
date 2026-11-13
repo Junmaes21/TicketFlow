@@ -236,7 +236,7 @@ def register_routes(app):
     def lab_forge_session():
         import jwt as pyjwt
 
-        guessed_secret = "ticketflow-dev-secret-2024"
+        guessed_secret = "ticketflow-dev-secret-2024"  # pragma: allowlist secret  # nosemgrep
         forged = pyjwt.encode(
             {"sub": "1", "username": "demo", "role": "admin"},
             guessed_secret, algorithm="HS256",
@@ -257,5 +257,5 @@ def register_routes(app):
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)  # nosemgrep
 

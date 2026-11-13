@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TicketFlow</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎫 TicketFlow</h1>
+    <button id="theme-toggle" class="btn-ghost">🌙 / ☀️</button>
+  </header>
+
+  <!-- AUTH SCREEN -->
+  <section id="auth-screen" class="screen">
+    <div class="card auth-card">
+      <h2 id="auth-title">Iniciar sesión</h2>
+      <form id="auth-form">
+        <input type="text" id="auth-username" placeholder="Usuario" required />
+        <input type="password" id="auth-password" placeholder="Contraseña" required />
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+      <p class="switch">
+        <a href="#" id="auth-switch">¿No tienes cuenta? Regístrate</a>
+      </p>
+      <p id="auth-error" class="error"></p>
+    </div>
+
+    <!-- LABORATORIO DE SEGURIDAD -->
+    <div class="card lab-card">
+      <h3>🔬 Laboratorio de seguridad</h3>
+      <p class="muted">Demostración en vivo de los ataques que este pipeline detecta. Inicia sesión primero.</p>
+      <div class="lab-buttons">
+        <button class="btn-lab" data-lab="path-traversal">Robar archivo (path traversal)</button>
+        <button class="btn-lab" data-lab="forge-session">Falsificar sesión (JWT)</button>
+        <button class="btn-lab" data-lab="xss">Inyectar script (XSS)</button>
+      </div>
+      <pre id="lab-output" class="lab-output"></pre>
+    </div>
+  </section>
+
+  <!-- APP SCREEN -->
+  <section id="app-screen" class="screen hidden">
+    <div class="app-layout">
+      <aside class="sidebar">
+        <p>Hola, <span id="current-username"></span></p>
+        <p class="role-badge" id="current-role"></p>
+        <button id="logout-btn" class="btn-ghost">Cerrar sesión</button>
+      </aside>
+
+      <main class="main">
+        <div class="new-ticket card">
+          <h3>Nuevo ticket</h3>
+          <form id="ticket-form">
+            <input type="text" id="ticket-title" placeholder="Título" required />
+            <textarea id="ticket-description" placeholder="Descripción" required></textarea>
+            <button type="submit" class="btn-primary">Crear ticket</button>
+          </form>
+        </div>
+
+        <div id="tickets-board" class="board"></div>
+      </main>
+
+      <section id="ticket-detail" class="detail hidden">
+        <button id="close-detail" class="btn-ghost">← Volver</button>
+        <div id="ticket-detail-content"></div>
+      </section>
+    </div>
+  </section>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

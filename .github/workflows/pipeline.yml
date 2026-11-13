@@ -24,7 +24,7 @@ jobs:
           pip install semgrep
           semgrep scan --config=auto --error --exclude=vulnerable_version .
 
-    dependency-check:
+  dependency-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

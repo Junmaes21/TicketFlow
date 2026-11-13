@@ -8,68 +8,86 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>🎫 TicketFlow</h1>
-    <button id="theme-toggle" class="btn-ghost">🌙 / ☀️</button>
+    <a class="brand" href="#" aria-label="TicketFlow, inicio"><span class="brand-mark">T</span><span>TicketFlow</span></a>
+    <button id="theme-toggle" class="btn-ghost" type="button" aria-label="Cambiar tema">☼ <span>Tema</span></button>
   </header>
 
-  <!-- AUTH SCREEN -->
-  <section id="auth-screen" class="screen">
-    <div class="card auth-card">
-      <h2 id="auth-title">Iniciar sesión</h2>
-      <form id="auth-form">
-        <input type="text" id="auth-username" placeholder="Usuario" required />
-        <input type="password" id="auth-password" placeholder="Contraseña" required />
-        <button type="submit" class="btn-primary">Entrar</button>
-      </form>
-      <p class="switch">
-        <a href="#" id="auth-switch">¿No tienes cuenta? Regístrate</a>
-      </p>
-      <p id="auth-error" class="error"></p>
+  <section id="auth-screen" class="screen auth-screen">
+    <div class="auth-intro">
+      <p class="eyebrow">CENTRO DE SOPORTE</p>
+      <h1>Resuelve solicitudes en un solo lugar</h1>
+      <p class="muted">Inicia sesión para revisar tus tickets o crea una cuenta para comenzar.</p>
     </div>
-
+    <div class="card auth-card">
+      <div class="auth-tabs" role="tablist" aria-label="Acceso a TicketFlow">
+        <button type="button" class="auth-tab active" id="login-tab" role="tab" aria-selected="true">Iniciar sesión</button>
+        <button type="button" class="auth-tab" id="register-tab" role="tab" aria-selected="false">Crear cuenta</button>
+      </div>
+      <h2 id="auth-title">Bienvenido de nuevo</h2>
+      <p id="auth-description" class="muted">Ingresa tus datos para continuar con tus solicitudes.</p>
+      <form id="auth-form">
+        <label for="auth-username">Usuario</label>
+        <input type="text" id="auth-username" autocomplete="username" placeholder="Tu usuario" required />
+        <label for="auth-password">Contraseña</label>
+        <input type="password" id="auth-password" autocomplete="current-password" placeholder="Tu contraseña" required />
+        <button type="submit" class="btn-primary" id="auth-submit">Iniciar sesión</button>
+      </form>
+      <p id="auth-error" class="auth-message" aria-live="polite"></p>
+    </div>
   </section>
 
-  <!-- APP SCREEN -->
-  <section id="app-screen" class="screen hidden">
+  <section id="app-screen" class="screen app-screen hidden">
     <div class="app-layout">
       <aside class="sidebar">
-        <p>Hola, <span id="current-username"></span></p>
-        <p class="role-badge" id="current-role"></p>
-        <button id="logout-btn" class="btn-ghost">Cerrar sesión</button>
+        <div class="profile-mark" aria-hidden="true">●</div>
+        <div class="profile-copy"><span class="muted">Sesión iniciada como</span><strong id="current-username"></strong></div>
+        <span class="role-badge" id="current-role"></span>
+        <button id="logout-btn" class="btn-ghost logout-btn" type="button">Cerrar sesión</button>
       </aside>
 
       <main class="main">
-        <!-- LABORATORIO DE SEGURIDAD -->
-        <div class="card lab-card">
-          <h3>🔬 Laboratorio de seguridad</h3>
-          <p class="muted">Prueba las protecciones con tu sesión iniciada. Las demostraciones no acceden a información ajena ni ejecutan código.</p>
+        <div class="page-heading">
+          <p class="eyebrow">TU ESPACIO DE TRABAJO</p>
+          <h1>Solicitudes de soporte</h1>
+          <p class="muted">Crea un ticket nuevo o selecciona uno para ver su conversación y archivos.</p>
+        </div>
+        <section class="new-ticket card" aria-labelledby="new-ticket-title">
+          <div class="section-heading">
+            <div><span class="step-label">PASO 1</span><h2 id="new-ticket-title">¿Necesitas ayuda?</h2></div>
+            <p class="muted">Describe el problema para crear una solicitud.</p>
+          </div>
+          <form id="ticket-form">
+            <label for="ticket-title">Asunto</label>
+            <input type="text" id="ticket-title" placeholder="Ej. No puedo acceder a mi cuenta" required />
+            <label for="ticket-description">¿Qué está ocurriendo?</label>
+            <textarea id="ticket-description" placeholder="Cuéntanos qué pasó y qué necesitas..." required></textarea>
+            <button type="submit" class="btn-primary create-btn">Crear ticket</button>
+          </form>
+        </section>
+        <section class="tickets-section" aria-labelledby="tickets-title">
+          <div class="section-heading tickets-heading">
+            <div><span class="step-label">PASO 2</span><h2 id="tickets-title">Tus tickets</h2></div>
+            <span id="ticket-count" class="count-badge">0 solicitudes</span>
+          </div>
+          <div id="tickets-board" class="board"></div>
+        </section>
+        <details class="card lab-card">
+          <summary><span>Laboratorio de seguridad</span><span class="muted">Demostraciones de las protecciones de la aplicación</span></summary>
+          <p class="muted">Ejecuta estas pruebas de demostración con tu sesión. No acceden a información ajena ni ejecutan código.</p>
           <div class="lab-buttons">
-            <button class="btn-lab" data-lab="path-traversal">Probar path traversal</button>
-            <button class="btn-lab" data-lab="forge-session">Probar falsificación de JWT</button>
-            <button class="btn-lab" data-lab="xss">Probar XSS almacenado</button>
+            <button class="btn-lab" data-lab="path-traversal" type="button">Probar path traversal</button>
+            <button class="btn-lab" data-lab="forge-session" type="button">Probar falsificación de JWT</button>
+            <button class="btn-lab" data-lab="xss" type="button">Probar XSS almacenado</button>
           </div>
           <pre id="lab-output" class="lab-output" aria-live="polite"></pre>
-        </div>
-
-        <div class="new-ticket card">
-          <h3>Nuevo ticket</h3>
-          <form id="ticket-form">
-            <input type="text" id="ticket-title" placeholder="Título" required />
-            <textarea id="ticket-description" placeholder="Descripción" required></textarea>
-            <button type="submit" class="btn-primary">Crear ticket</button>
-          </form>
-        </div>
-
-        <div id="tickets-board" class="board"></div>
+        </details>
       </main>
-
-      <section id="ticket-detail" class="detail hidden">
-        <button id="close-detail" class="btn-ghost">← Volver</button>
+      <section id="ticket-detail" class="detail card hidden" aria-label="Detalle del ticket">
+        <button id="close-detail" class="btn-ghost" type="button">← Volver a mis tickets</button>
         <div id="ticket-detail-content"></div>
       </section>
     </div>
   </section>
-
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

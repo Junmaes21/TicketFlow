@@ -16,18 +16,28 @@ themeToggle.addEventListener("click", () => {
 // ---------- auth ----------
 let isRegisterMode = false;
 const authTitle = $("#auth-title");
-const authSwitch = $("#auth-switch");
+const authDescription = $("#auth-description");
 const authForm = $("#auth-form");
 const authError = $("#auth-error");
 
-authSwitch.addEventListener("click", (e) => {
-  e.preventDefault();
-  isRegisterMode = !isRegisterMode;
-  authTitle.textContent = isRegisterMode ? "Crear cuenta" : "Iniciar sesión";
-  authSwitch.textContent = isRegisterMode
-    ? "¿Ya tienes cuenta? Inicia sesión"
-    : "¿No tienes cuenta? Regístrate";
-});
+function setAuthMode(registerMode) {
+  isRegisterMode = registerMode;
+  $("#login-tab").classList.toggle("active", !registerMode);
+  $("#login-tab").setAttribute("aria-selected", String(!registerMode));
+  $("#register-tab").classList.toggle("active", registerMode);
+  $("#register-tab").setAttribute("aria-selected", String(registerMode));
+  authTitle.textContent = registerMode ? "Crea tu cuenta" : "Bienvenido de nuevo";
+  authDescription.textContent = registerMode
+    ? "Regístrate para empezar a crear y seguir tus solicitudes."
+    : "Ingresa tus datos para continuar con tus solicitudes.";
+  $("#auth-submit").textContent = registerMode ? "Crear cuenta" : "Iniciar sesión";
+  $("#auth-password").autocomplete = registerMode ? "new-password" : "current-password";
+  authError.textContent = "";
+  authError.classList.remove("success");
+}
+
+$("#login-tab").addEventListener("click", () => setAuthMode(false));
+$("#register-tab").addEventListener("click", () => setAuthMode(true));
 
 authForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -43,9 +53,9 @@ authForm.addEventListener("submit", async (e) => {
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      isRegisterMode = false;
-      authTitle.textContent = "Iniciar sesión";
-      authError.textContent = "Cuenta creada, ya puedes iniciar sesión.";
+      setAuthMode(false);
+      authError.textContent = "Cuenta creada. Ahora inicia sesión con tus datos.";
+      authError.classList.add("success");
       return;
     }
 
@@ -76,6 +86,7 @@ function enterApp() {
   $("#auth-screen").classList.add("hidden");
   $("#app-screen").classList.remove("hidden");
   $("#current-username").textContent = currentUser.username;
+  $("#profile-mark").textContent = currentUser.username.charAt(0).toUpperCase();
   $("#current-role").textContent = currentUser.role;
   loadTickets();
 }
@@ -106,6 +117,19 @@ async function loadTickets() {
   const tickets = await res.json();
   const board = $("#tickets-board");
   board.innerHTML = "";
+  $("#ticket-count").textContent = `${tickets.length} ${tickets.length === 1 ? "solicitud" : "solicitudes"}`;
+  if (tickets.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    const title = document.createElement("strong");
+    title.textContent = "Todavía no tienes tickets";
+    const hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = "Usa el formulario de arriba para crear tu primera solicitud.";
+    empty.append(title, hint);
+    board.appendChild(empty);
+    return;
+  }
 
   tickets.forEach((t) => {
     const card = document.createElement("div");
@@ -119,7 +143,12 @@ async function loadTickets() {
     pill.textContent = t.status;
 
     card.appendChild(title);
-    card.appendChild(pill);
+    const meta = document.createElement("div");
+    meta.className = "ticket-meta";
+    const prompt = document.createElement("span");
+    prompt.textContent = "Abrir detalles";
+    meta.append(prompt, pill);
+    card.appendChild(meta);
     card.addEventListener("click", () => openTicket(t.id));
     board.appendChild(card);
   });
@@ -131,6 +160,7 @@ async function openTicket(id) {
   const data = await res.json();
   renderTicketDetail(data);
   $("#ticket-detail").classList.remove("hidden");
+  $("#app-screen").classList.add("ticket-open");
 }
 
 function renderTicketDetail(data) {
@@ -283,6 +313,7 @@ async function downloadAttachment(attachment) {
 
 $("#close-detail").addEventListener("click", () => {
   $("#ticket-detail").classList.add("hidden");
+  $("#app-screen").classList.remove("ticket-open");
 });
 
 // ---------- laboratorio de seguridad ----------

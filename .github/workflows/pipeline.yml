@@ -24,7 +24,7 @@ jobs:
           pip install semgrep
           semgrep scan --config=auto --error --exclude=vulnerable_version .
 
-  dependency-check:
+    dependency-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +35,7 @@ jobs:
           path: "."
           format: "HTML"
           args: >
+            --enableExperimental
             --failOnCVSS 4
             --exclude "**/vulnerable_version/**"
       - name: Subir reporte

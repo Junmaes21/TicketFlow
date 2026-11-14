@@ -1,6 +1,8 @@
 import io
 
+import pytest
 from conftest import register_and_login
+from jwt.warnings import InsecureKeyLengthWarning
 
 
 def test_create_and_list_ticket(client):
@@ -103,3 +105,53 @@ def test_upload_and_download_attachment(client):
     )
     assert res.status_code == 200
     assert res.data == b"contenido de prueba"
+
+
+def test_member_cannot_download_another_users_attachment(client):
+    owner_token = register_and_login(client, "owner", "clave1234")
+    other_token = register_and_login(client, "other", "clave1234")
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
+    other_headers = {"Authorization": f"Bearer {other_token}"}
+    ticket = client.post(
+        "/api/tickets",
+        json={"title": "privado", "description": "solo para su autor"},
+        headers=owner_headers,
+    ).get_json()
+    upload = client.post(
+        f"/api/tickets/{ticket['id']}/attachments",
+        data={"file": (io.BytesIO(b"privado"), "privado.txt")},
+        headers=owner_headers,
+        content_type="multipart/form-data",
+    )
+    attachment_id = upload.get_json()["id"]
+
+    response = client.get(
+        f"/api/tickets/{ticket['id']}/attachments/{attachment_id}",
+        headers=other_headers,
+    )
+
+    assert response.status_code == 403
+
+
+def test_path_traversal_demo_reports_outside_path_as_blocked(client):
+    token = register_and_login(client)
+    response = client.post(
+        "/api/security-lab/path-traversal",
+        json={"path": "../../app.py"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["blocked"] is True
+
+
+def test_jwt_demo_rejects_the_old_hardcoded_secret(client):
+    token = register_and_login(client)
+    with pytest.warns(InsecureKeyLengthWarning, match="HMAC key"):
+        response = client.post(
+            "/api/security-lab/forge-session",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["blocked"] is True

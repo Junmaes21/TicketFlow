@@ -1,14 +1,14 @@
 import os
 import uuid
 
-from flask import Flask, request, jsonify, g, render_template, send_from_directory
+from flask import Flask, g, jsonify, render_template, request, send_from_directory
 from markupsafe import escape
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+from auth import generate_token, login_required
 from config import Config
-from db import get_db, close_db, init_db, query, execute
-from auth import generate_token, login_required, admin_required
+from db import close_db, execute, init_db, query
 
 
 def create_app(config_object=Config):
@@ -269,17 +269,21 @@ def register_routes(app):
         """Intenta leer un archivo fuera de uploads/ usando el endpoint real
         de descarga. En la rama fixed esto siempre falla porque el nombre en
         disco nunca sale del servidor."""
-        target = request.get_json(silent=True, force=True) or {}
+        target = request.get_json(silent=True) or {}
         fake_path = target.get("path", "../../app.py")
-        attempted = os.path.join(app.config["UPLOAD_FOLDER"], fake_path)
+        if not isinstance(fake_path, str):
+            fake_path = "../../app.py"
+        upload_root = os.path.realpath(app.config["UPLOAD_FOLDER"])
+        attempted = os.path.join(upload_root, fake_path)
         resolved = os.path.realpath(attempted)
-        inside_uploads = resolved.startswith(
-            os.path.realpath(app.config["UPLOAD_FOLDER"])
-        )
+        try:
+            inside_uploads = os.path.commonpath((upload_root, resolved)) == upload_root
+        except ValueError:
+            inside_uploads = False
         return jsonify(
-            blocked=inside_uploads is False and True or True,
-            detail="el servidor nunca abre una ruta fuera de uploads/, "
-            "la descarga real solo acepta un id de adjunto, no una ruta",
+            blocked=not inside_uploads,
+            detail="la descarga solo acepta el id de un adjunto existente; "
+            "el servidor no recibe una ruta de archivo del cliente",
         )
 
     @app.post("/api/security-lab/forge-session")
@@ -290,8 +294,8 @@ def register_routes(app):
         lo acepta."""
         import jwt as pyjwt
 
-        guessed_secret = "ticketflow-dev-secret-2024"
-        forged = pyjwt.encode(
+        guessed_secret = "ticketflow-dev-secret-2024"  # pragma: allowlist secret  # nosemgrep
+        forged = pyjwt.encode(  # nosemgrep
             {"sub": "1", "username": "demo", "role": "admin"},
             guessed_secret,
             algorithm="HS256",
@@ -316,4 +320,4 @@ def register_routes(app):
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=False)  # nosemgrep

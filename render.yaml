@@ -1,7 +1,7 @@
 services:
   - type: web
     name: ticketflow
-    env: python
+    runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn wsgi:app"
@@ -9,5 +9,5 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
-        value: 3.11.9
-    autoDeploy: false
+        value: "3.11.18"
+    autoDeployTrigger: "off"

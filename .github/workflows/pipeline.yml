@@ -1,0 +1,126 @@
+name: Pipeline de seguridad
+
+on:
+  push:
+    branches: [fixed, vulnerable]
+  pull_request:
+    branches: [fixed, vulnerable]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.18"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+      - run: ruff check app.py auth.py config.py db.py wsgi.py tests
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analisis estatico con Semgrep
+        run: |
+          pip install semgrep
+          semgrep scan --config=auto --error --exclude=vulnerable_version --exclude=.github .
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analisis de dependencias con OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "TicketFlow"
+          path: "."
+          format: "HTML"
+          args: >
+            --enableExperimental
+            --failOnCVSS 4
+            --exclude "**/vulnerable_version/**"
+            --suppression dependency-check-suppression.xml
+      - name: Subir reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports
+
+  detect-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Escaneo de secretos con detect-secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --exclude-files '(vulnerable_version|tests)/.*' > secrets-report.json
+          python - <<'EOF'
+          import json, sys
+          data = json.load(open("secrets-report.json"))
+          if data.get("results"):
+              print("Se encontraron posibles secretos:")
+              print(json.dumps(data["results"], indent=2))
+              sys.exit(1)
+          print("No se encontraron secretos.")
+          EOF
+
+  zap:
+    needs: [test, semgrep, dependency-check, detect-secrets]
+    if: github.ref == 'refs/heads/fixed' || github.base_ref == 'fixed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.18"
+      - name: Instalar la aplicacion
+        run: pip install -r requirements.txt
+      - name: Generar una clave temporal para el escaneo
+        run: echo "JWT_SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Iniciar la aplicacion candidata
+        env:
+          DATABASE_PATH: /tmp/ticketflow-zap.sqlite
+          UPLOAD_FOLDER: /tmp/ticketflow-zap-uploads
+        run: |
+          mkdir -p "$UPLOAD_FOLDER"
+          nohup gunicorn --bind 0.0.0.0:5000 --workers 1 wsgi:app > /tmp/ticketflow-zap.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:5000/; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ticketflow-zap.log
+          exit 1
+      - name: Escaneo dinamico antes del despliegue con OWASP ZAP
+        env:
+          ZAP_REPORT_DIR: ${{ runner.temp }}/zap-report
+        run: |
+          mkdir -p "$ZAP_REPORT_DIR"
+          chmod 777 "$ZAP_REPORT_DIR"
+          docker run --rm --network host \
+            -v "$ZAP_REPORT_DIR:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://127.0.0.1:5000 -I -r zap-report.html
+      - name: Guardar reporte de ZAP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: ${{ runner.temp }}/zap-report/zap-report.html
+          if-no-files-found: error
+
+  deploy:
+    needs: [test, semgrep, dependency-check, detect-secrets, zap]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fixed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar despliegue en Render
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl --fail-with-body --silent --show-error -X POST "$RENDER_DEPLOY_HOOK"

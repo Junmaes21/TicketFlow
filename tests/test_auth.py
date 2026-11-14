@@ -1,6 +1,3 @@
-from conftest import register_and_login
-
-
 def test_register_and_login(client):
     res = client.post(
         "/api/register", json={"username": "ana", "password": "claveana1"}
@@ -30,3 +27,10 @@ def test_second_user_is_member(client):
     client.post("/api/register", json={"username": "admin1", "password": "clave1234"})
     res = client.post("/api/register", json={"username": "bob", "password": "clave1234"})
     assert res.get_json()["role"] == "member"
+
+
+def test_security_lab_is_inside_authenticated_app(client):
+    html = client.get("/").get_data(as_text=True)
+    app_screen = html.index('id="app-screen"')
+    lab_card = html.index('class="card lab-card"')
+    assert lab_card > app_screen

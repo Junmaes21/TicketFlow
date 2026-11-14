@@ -98,9 +98,13 @@ jobs:
           cat /tmp/ticketflow-zap.log
           exit 1
       - name: Escaneo dinamico antes del despliegue con OWASP ZAP
+        env:
+          ZAP_REPORT_DIR: ${{ runner.temp }}/zap-report
         run: |
+          mkdir -p "$ZAP_REPORT_DIR"
+          chmod 777 "$ZAP_REPORT_DIR"
           docker run --rm --network host \
-            -v "$PWD:/zap/wrk/:rw" \
+            -v "$ZAP_REPORT_DIR:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
             -t http://127.0.0.1:5000 -I -r zap-report.html
       - name: Guardar reporte de ZAP
@@ -108,8 +112,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: zap-report.html
-          if-no-files-found: ignore
+          path: ${{ runner.temp }}/zap-report/zap-report.html
+          if-no-files-found: error
 
   deploy:
     needs: [test, semgrep, dependency-check, detect-secrets, zap]

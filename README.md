@@ -5,7 +5,6 @@ Gestor de tickets de soporte creado con Flask y SQLite. Permite crear cuentas, a
 ## Enlaces
 
 - **Aplicación pública:** [ticketflow-j1xn.onrender.com](https://ticketflow-j1xn.onrender.com)
-- **Repositorio:** [Junmaes21/TicketFlow](https://github.com/Junmaes21/TicketFlow)
 - **Artículo en Medium:** [No todo lo que pasa en verde es seguro: escaneo de vulnerabilidades en TicketFlow](https://medium.com/@juniormaes21/no-todo-lo-que-pasa-en-verde-es-seguro-escaneo-de-vulnerabilidades-en-ticketflow-081656335166)
 
 Registra una cuenta para entrar. En una base de datos vacía, la primera cuenta es administradora; las siguientes son miembros. No uses información real: es una aplicación demostrativa.
